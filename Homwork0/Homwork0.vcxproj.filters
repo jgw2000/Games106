@@ -18,9 +18,6 @@
     <ClInclude Include="base\vulkanexamplebase.h">
       <Filter>base</Filter>
     </ClInclude>
-    <ClInclude Include="base\Entrypoints.h">
-      <Filter>base</Filter>
-    </ClInclude>
     <ClInclude Include="base\CommandLineParser.h">
       <Filter>base</Filter>
     </ClInclude>

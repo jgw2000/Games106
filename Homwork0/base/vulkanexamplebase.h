@@ -217,5 +217,3 @@ private:
 
     std::string shaderDir = "glsl";
 };
-
-#include "Entrypoints.h"
