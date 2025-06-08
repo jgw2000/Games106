@@ -10,9 +10,11 @@
 
 #pragma once
 
+#include "VulkanTools.h"
+
 #include <vulkan/vulkan.hpp>
 #include <algorithm>
-#include <assert.h>
+#include <cassert>
 #include <exception>
 
 namespace vks
@@ -58,5 +60,21 @@ namespace vks
         {
             return logicalDevice;
         };
+
+        explicit VulkanDevice(vk::PhysicalDevice physicalDevice);
+        ~VulkanDevice();
+
+        uint32_t getQueueFamilyIndex(vk::QueueFlags queueFlags) const;
+
+        vk::Result createLogicalDevice(vk::PhysicalDeviceFeatures enabledFeatures,
+                                       std::vector<const char*>   enabledExtensions,
+                                       void*                      pNextChain,
+                                       bool                       useSwapChain        = true,
+                                       vk::QueueFlags             requestedQueueTypes = vk::QueueFlagBits::eGraphics | vk::QueueFlagBits::eCompute);
+
+        vk::CommandPool createCommandPool(uint32_t                   queueFamilyIndex,
+                                          vk::CommandPoolCreateFlags createFlags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
+       
+        bool extensionSupported(std::string extension);
     };
 }

@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="base\VulkanDevice.cpp" />
     <ClCompile Include="base\vulkanexamplebase.cpp" />
+    <ClCompile Include="base\VulkanSwapchain.cpp" />
     <ClCompile Include="base\VulkanTools.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
@@ -29,6 +30,7 @@
     <ClInclude Include="base\keycodes.h" />
     <ClInclude Include="base\VulkanDevice.h" />
     <ClInclude Include="base\vulkanexamplebase.h" />
+    <ClInclude Include="base\VulkanSwapchain.h" />
     <ClInclude Include="base\VulkanTools.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

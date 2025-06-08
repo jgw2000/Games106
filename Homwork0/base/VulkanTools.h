@@ -9,13 +9,13 @@
 #pragma once
 
 #include <vulkan/vulkan.hpp>
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 #include <string>
 #include <cstring>
 #include <fstream>
-#include <assert.h>
-#include <stdio.h>
+#include <cassert>
+#include <cstdio>
 #include <vector>
 #include <iostream>
 #include <stdexcept>
@@ -66,4 +66,11 @@ namespace vks::tools
     // Display error message and exit on fatal error
     void exitFatal(const std::string& message, int32_t exitCode);
     void exitFatal(const std::string& message, vk::Result resultCode);
+
+    // Selected a suitable supported depth format starting with 32 bit down to 16 bit
+    // Returns false if none of the depth formats in the list is supported by the device
+    vk::Bool32 getSupportedDepthFormat(vk::PhysicalDevice physicalDevice, vk::Format* depthFormat);
+
+    // Same as getSupportedDepthFormat but will only select formats that also have stencil
+    vk::Bool32 getSupportedDepthStencilFormat(vk::PhysicalDevice physicalDevice, vk::Format* depthStencilFormat);
 }

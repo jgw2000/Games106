@@ -64,4 +64,50 @@ namespace vks::tools
     {
         exitFatal(message, (int32_t)resultCode);
     }
+
+    vk::Bool32 getSupportedDepthFormat(vk::PhysicalDevice physicalDevice, vk::Format* depthFormat)
+    {
+        // Since all depth formats may be optional, we need to find a suitable depth format to use
+        // Start with the highest precision packed format
+        std::vector<vk::Format> formatList = {
+            vk::Format::eD32SfloatS8Uint,
+            vk::Format::eD32Sfloat,
+            vk::Format::eD24UnormS8Uint,
+            vk::Format::eD24UnormS8Uint,
+            vk::Format::eD16Unorm
+        };
+
+        for (auto& format : formatList)
+        {
+            vk::FormatProperties formatProps = physicalDevice.getFormatProperties(format);
+            if (formatProps.optimalTilingFeatures & vk::FormatFeatureFlagBits::eDepthStencilAttachment)
+            {
+                *depthFormat = format;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    vk::Bool32 getSupportedDepthStencilFormat(vk::PhysicalDevice physicalDevice, vk::Format* depthStencilFormat)
+    {
+        std::vector<vk::Format> formatList = {
+            vk::Format::eD32SfloatS8Uint,
+            vk::Format::eD24UnormS8Uint,
+            vk::Format::eD24UnormS8Uint,
+        };
+
+        for (auto& format : formatList)
+        {
+            vk::FormatProperties formatProps = physicalDevice.getFormatProperties(format);
+            if (formatProps.optimalTilingFeatures & vk::FormatFeatureFlagBits::eDepthStencilAttachment)
+            {
+                *depthStencilFormat = format;
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

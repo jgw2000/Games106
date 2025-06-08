@@ -45,9 +45,11 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.hpp>
 
+#include "keycodes.h"
 #include "CommandLineParser.h"
 #include "VulkanTools.h"
-#include "keycodes.h"
+#include "VulkanDevice.h"
+#include "VulkanSwapchain.h"
 
 class VulkanExampleBase
 {
@@ -125,6 +127,9 @@ public:
 
     CommandLineParser commandLineParser;
 
+    /** @brief Encapsulated physical and logical vulkan device */
+    vks::VulkanDevice* vulkanDevice{};
+
     /** @brief Example settings that can be changed e.g. by command line arguments */
     struct Settings {
         /** @brief Activates validation layers (and message output) when set to true */
@@ -188,6 +193,15 @@ protected:
     // Physical device (GPU) that Vulkan will use
     vk::PhysicalDevice physicalDevice{ nullptr };
 
+    /** @brief Logical device, application's view of the physical device (GPU) */
+    vk::Device device{ nullptr };
+
+    // Handle to the device graphics queue that command buffers are submitted to
+    vk::Queue queue{ nullptr };
+
+    // Depth buffer format (selected during Vulkan initialization)
+    vk::Format depthFormat{ vk::Format::eUndefined };
+
     // Stores physical device properties (for e.g. checking device limits)
     vk::PhysicalDeviceProperties deviceProperties{};
 
@@ -203,10 +217,33 @@ protected:
     /** @brief Set of device extensions to be enabled for this example (must be set in the derived constructor) */
     std::vector<const char*> enabledDeviceExtensions;
 
+    /** @brief Set of physical device features to be enabled for this example (must be set in the derived constructor) */
+    vk::PhysicalDeviceFeatures enabledFeatures{};
+
     /** @brief Set of layer settings to be enabled for this example (must be set in the derived constructor) */
     std::vector<vk::LayerSettingEXT> enabledLayerSettings;
 
+    // Wraps the swap chain to present images (framebuffers) to the windowing system
+    VulkanSwapchain swapchain;
+
+    // Synchronization semaphores
+    struct {
+        // Swap chain image presentation
+        vk::Semaphore presentComplete;
+        // Command buffer submission and execution
+        vk::Semaphore renderComplete;
+    } semaphores{};
+    std::vector<vk::Fence> waitFences;
+
+    /** @brief Optional pNext structure for passing extension structures to device creation */
+    void* deviceCreatepNextChain = nullptr;
+
+    bool requiresStencil{ false };
+
 private:
+    void createSurface();
+    void createSwapchain();
+
     std::string getWindowTitle() const;
     void handleMouseMove(int32_t x, int32_t y);
     void nextFrame();

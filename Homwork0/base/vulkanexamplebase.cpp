@@ -71,6 +71,18 @@ VulkanExampleBase::VulkanExampleBase()
 
 VulkanExampleBase::~VulkanExampleBase()
 {
+    // Clean up Vulkan resources
+    swapchain.cleanup();
+
+    device.destroySemaphore(semaphores.presentComplete);
+    device.destroySemaphore(semaphores.renderComplete);
+
+    for (auto& fence : waitFences) {
+        device.destroyFence(fence);
+    }
+
+    delete vulkanDevice;
+
     instance.destroy();
 }
 
@@ -102,17 +114,58 @@ bool VulkanExampleBase::initVulkan()
     deviceMemoryProperties = physicalDevice.getMemoryProperties();
 
     // Drived examples can override this to set actual features to enable for logical device creation
-    getEnabledExtensions();
+    getEnabledFeatures();
 
     // Vulkan device creation
     // This is handled by a separate class that gets a logical device representation
     // and encapsulates functions related to a device
+    vulkanDevice = new vks::VulkanDevice(physicalDevice);
 
+    // Derived examples can enable extensions based on the list of supported extensions read from the physical device
+    getEnabledExtensions();
+
+    result = vulkanDevice->createLogicalDevice(enabledFeatures, enabledDeviceExtensions, deviceCreatepNextChain);
+    if (result != vk::Result::eSuccess) {
+        vks::tools::exitFatal("Could not create Vulkan device: \n" + vks::tools::errorString(result), result);
+        return false;
+    }
+    device = vulkanDevice->logicalDevice;
+
+    // Get a graphics queue from the device
+    queue = device.getQueue(vulkanDevice->queueFamilyIndices.graphics, 0);
+
+    // Find a suitable depth and/or stencil format
+    vk::Bool32 validFormat{ false };
+
+    // Samples that make use of stencil will require a depth + stencil format, so we select from a different list
+    if (requiresStencil) {
+        validFormat = vks::tools::getSupportedDepthStencilFormat(physicalDevice, &depthFormat);
+    }
+    else {
+        validFormat = vks::tools::getSupportedDepthFormat(physicalDevice, &depthFormat);
+    }
+    assert(validFormat);
+
+    swapchain.setContext(instance, physicalDevice, device);
+
+    // Create synchronization objects
+    vk::SemaphoreCreateInfo semaphoreCreateInfo = {};
+    // Create a semaphore used to synchronize image presentation
+    // Ensures that the image is displayed before we start submitting new commands to the queue
+    VK_CHECK_RESULT(device.createSemaphore(&semaphoreCreateInfo, nullptr, &semaphores.presentComplete));
+    // Create a semaphore used to synchronize command submission
+    // Ensures that the image is not presented until all commands have been submitted and executed
+    VK_CHECK_RESULT(device.createSemaphore(&semaphoreCreateInfo, nullptr, &semaphores.renderComplete));
+
+    // TODO
+ 
     return true;
 }
 
 void VulkanExampleBase::prepare()
 {
+    createSurface();
+    createSwapchain();
 }
 
 void VulkanExampleBase::renderLoop()
@@ -487,6 +540,18 @@ void VulkanExampleBase::handleMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
     OnHandleMessage(hWnd, uMsg, wParam, lParam);
 }
 #endif
+
+void VulkanExampleBase::createSurface()
+{
+#if defined(_WIN32)
+    swapchain.initSurface(windowInstance, window);
+#endif
+}
+
+void VulkanExampleBase::createSwapchain()
+{
+    swapchain.create(width, height, settings.vsync, settings.fullscreen);
+}
 
 std::string VulkanExampleBase::getWindowTitle() const
 {

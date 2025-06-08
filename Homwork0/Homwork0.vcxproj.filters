@@ -11,6 +11,9 @@
     <ClCompile Include="base\VulkanDevice.cpp">
       <Filter>base</Filter>
     </ClCompile>
+    <ClCompile Include="base\VulkanSwapchain.cpp">
+      <Filter>base</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="base">
@@ -31,6 +34,9 @@
       <Filter>base</Filter>
     </ClInclude>
     <ClInclude Include="base\VulkanDevice.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="base\VulkanSwapchain.h">
       <Filter>base</Filter>
     </ClInclude>
   </ItemGroup>
