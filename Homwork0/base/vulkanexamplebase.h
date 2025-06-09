@@ -226,6 +226,12 @@ protected:
     // Wraps the swap chain to present images (framebuffers) to the windowing system
     VulkanSwapchain swapchain;
 
+    // Command buffer pool
+    vk::CommandPool cmdPool{ nullptr };
+
+    // Command buffers used for rendering
+    std::vector<vk::CommandBuffer> drawCmdBuffers;
+
     // Synchronization semaphores
     struct {
         // Swap chain image presentation
@@ -243,6 +249,9 @@ protected:
 private:
     void createSurface();
     void createSwapchain();
+    void createCommandPool();
+    void createCommandBuffers();
+    void createSynchronizationPrimitives();
 
     std::string getWindowTitle() const;
     void handleMouseMove(int32_t x, int32_t y);

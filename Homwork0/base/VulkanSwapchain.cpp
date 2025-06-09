@@ -33,7 +33,7 @@ void VulkanSwapchain::initSurface(void* platformHandle, void* platformWindow)
     std::vector<vk::Bool32> supportsPresent(queueCount);
     for (uint32_t i = 0; i < queueCount; ++i)
     {
-        physicalDevice.getSurfaceSupportKHR(i, surface, &supportsPresent[i]);
+        VK_CHECK_RESULT(physicalDevice.getSurfaceSupportKHR(i, surface, &supportsPresent[i]));
     }
 
     // Search for a graphics and a present queue in the array of queue
@@ -247,11 +247,11 @@ void VulkanSwapchain::create(uint32_t& width, uint32_t& height, bool vsync, bool
 
     // Get the swap chain images
     images = device.getSwapchainImagesKHR(swapchain);
+    size_t imageCount = images.size();
+    imageViews.resize(imageCount);
 
     // Get the swap chain buffers containing the image and imageview
-    uint32_t imageCount = static_cast<uint32_t>(images.size());
-    imageViews.resize(imageCount);
-    for (auto i = 0; i < imageCount; ++i)
+    for (auto i = 0; i < images.size(); ++i)
     {
         vk::ImageViewCreateInfo colorAttachmentView = {};
         colorAttachmentView.format = colorFormat;

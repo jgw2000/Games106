@@ -74,9 +74,10 @@ VulkanExampleBase::~VulkanExampleBase()
     // Clean up Vulkan resources
     swapchain.cleanup();
 
+    device.destroyCommandPool(cmdPool);
+
     device.destroySemaphore(semaphores.presentComplete);
     device.destroySemaphore(semaphores.renderComplete);
-
     for (auto& fence : waitFences) {
         device.destroyFence(fence);
     }
@@ -148,15 +149,6 @@ bool VulkanExampleBase::initVulkan()
 
     swapchain.setContext(instance, physicalDevice, device);
 
-    // Create synchronization objects
-    vk::SemaphoreCreateInfo semaphoreCreateInfo = {};
-    // Create a semaphore used to synchronize image presentation
-    // Ensures that the image is displayed before we start submitting new commands to the queue
-    VK_CHECK_RESULT(device.createSemaphore(&semaphoreCreateInfo, nullptr, &semaphores.presentComplete));
-    // Create a semaphore used to synchronize command submission
-    // Ensures that the image is not presented until all commands have been submitted and executed
-    VK_CHECK_RESULT(device.createSemaphore(&semaphoreCreateInfo, nullptr, &semaphores.renderComplete));
-
     // TODO
  
     return true;
@@ -166,6 +158,9 @@ void VulkanExampleBase::prepare()
 {
     createSurface();
     createSwapchain();
+    createCommandPool();
+    createCommandBuffers();
+    createSynchronizationPrimitives();
 }
 
 void VulkanExampleBase::renderLoop()
@@ -551,6 +546,46 @@ void VulkanExampleBase::createSurface()
 void VulkanExampleBase::createSwapchain()
 {
     swapchain.create(width, height, settings.vsync, settings.fullscreen);
+}
+
+void VulkanExampleBase::createCommandPool()
+{
+    vk::CommandPoolCreateInfo cmdPoolInfo = {};
+    cmdPoolInfo.queueFamilyIndex = swapchain.queueNodeIndex;
+    cmdPoolInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
+    VK_CHECK_RESULT(device.createCommandPool(&cmdPoolInfo, nullptr, &cmdPool));
+}
+
+void VulkanExampleBase::createCommandBuffers()
+{
+    // Create one command buffer for each swap chain image
+    drawCmdBuffers.resize(swapchain.images.size());
+    vk::CommandBufferAllocateInfo cmdBufAllocateInfo = {};
+    cmdBufAllocateInfo.commandPool = cmdPool;
+    cmdBufAllocateInfo.level = vk::CommandBufferLevel::ePrimary;
+    cmdBufAllocateInfo.commandBufferCount = static_cast<uint32_t>(drawCmdBuffers.size());
+    VK_CHECK_RESULT(device.allocateCommandBuffers(&cmdBufAllocateInfo, drawCmdBuffers.data()));
+}
+
+void VulkanExampleBase::createSynchronizationPrimitives()
+{
+    // Create synchronization objects
+    vk::SemaphoreCreateInfo semaphoreCreateInfo = {};
+    
+    // Create a semaphore used to synchronize image presentation
+    // Ensures that the image is displayed before we start submitting new commands to the queue
+    VK_CHECK_RESULT(device.createSemaphore(&semaphoreCreateInfo, nullptr, &semaphores.presentComplete));
+    
+    // Create a semaphore used to synchronize command submission
+    // Ensures that the image is not presented until all commands have been submitted and executed
+    VK_CHECK_RESULT(device.createSemaphore(&semaphoreCreateInfo, nullptr, &semaphores.renderComplete));
+
+    // Wait fences to sync command buffer access
+    vk::FenceCreateInfo fenceCreateInfo = {};
+    waitFences.resize(drawCmdBuffers.size());
+    for (auto& fence : waitFences) {
+        VK_CHECK_RESULT(device.createFence(&fenceCreateInfo, nullptr, &fence));
+    }
 }
 
 std::string VulkanExampleBase::getWindowTitle() const
