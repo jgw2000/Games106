@@ -67,6 +67,46 @@ namespace vks
     }
 
     /**
+    * Get the index of a memory type that has all the requested property bits set
+    *
+    * @param typeBits Bit mask with bits set for each memory type supported by the resource to request for (from VkMemoryRequirements)
+    * @param properties Bit mask of properties for the memory type to request
+    * @param (Optional) memTypeFound Pointer to a bool that is set to true if a matching memory type has been found
+    *
+    * @return Index of the requested memory type
+    *
+    * @throw Throws an exception if memTypeFound is null and no memory type could be found that supports the requested properties
+    */
+    uint32_t VulkanDevice::getMemoryType(uint32_t typeBits, vk::MemoryPropertyFlags properties, vk::Bool32* memTypeFound) const
+    {
+        for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i)
+        {
+            if ((typeBits & 1) == 1)
+            {
+                if ((memoryProperties.memoryTypes[i].propertyFlags & properties) == properties)
+                {
+                    if (memTypeFound)
+                    {
+                        *memTypeFound = true;
+                    }
+                    return i;
+                }
+            }
+            typeBits >>= 1;
+        }
+
+        if (memTypeFound)
+        {
+            *memTypeFound = false;
+            return 0;
+        }
+        else
+        {
+            throw std::runtime_error("Could not find a matching memory type");
+        }
+    }
+
+    /**
     * Get the index of a queue family that supports the requested queue flags
     * SRS - support VkQueueFlags parameter for requesting multiple flags vs. VkQueueFlagBits for a single flag only
     *

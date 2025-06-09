@@ -64,6 +64,7 @@ namespace vks
         explicit VulkanDevice(vk::PhysicalDevice physicalDevice);
         ~VulkanDevice();
 
+        uint32_t getMemoryType(uint32_t typeBits, vk::MemoryPropertyFlags properties, vk::Bool32* memTypeFound = nullptr) const;
         uint32_t getQueueFamilyIndex(vk::QueueFlags queueFlags) const;
 
         vk::Result createLogicalDevice(vk::PhysicalDeviceFeatures enabledFeatures,

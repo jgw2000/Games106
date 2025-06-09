@@ -87,7 +87,7 @@ public:
     virtual void buildCommandBuffers() {}
 
     /** @brief (Virtual) Setup default depth and stencil views */
-    virtual void setupDepthStencil() {}
+    virtual void setupDepthStencil();
 
     /** @brief (Virtual) Setup default framebuffers for all requested swapchain images */
     virtual void setupFrameBuffer() {}
@@ -169,6 +169,13 @@ public:
     float timerSpeed = 0.25f;
 
     bool paused = false;
+
+    /** @brief Default depth stencil attachment used by the default render pass */
+    struct {
+        vk::Image image;
+        vk::DeviceMemory memory;
+        vk::ImageView view;
+    } depthStencil{};
 
     // OS specific
 #if defined(_WIN32)

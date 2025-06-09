@@ -74,8 +74,14 @@ VulkanExampleBase::~VulkanExampleBase()
     // Clean up Vulkan resources
     swapchain.cleanup();
 
+    // depth stencil
+    device.destroyImageView(depthStencil.view);
+    device.destroyImage(depthStencil.image);
+    device.freeMemory(depthStencil.memory);
+
     device.destroyCommandPool(cmdPool);
 
+    // synchronization objects
     device.destroySemaphore(semaphores.presentComplete);
     device.destroySemaphore(semaphores.renderComplete);
     for (auto& fence : waitFences) {
@@ -161,6 +167,7 @@ void VulkanExampleBase::prepare()
     createCommandPool();
     createCommandBuffers();
     createSynchronizationPrimitives();
+    setupDepthStencil();
 }
 
 void VulkanExampleBase::renderLoop()
@@ -189,11 +196,6 @@ void VulkanExampleBase::renderLoop()
 #endif
 
     // Flush device to make sure all resources can be freed
-}
-
-void VulkanExampleBase::windowResize()
-{
-    // TODO
 }
 
 vk::Result VulkanExampleBase::createInstance()
@@ -287,6 +289,47 @@ vk::Result VulkanExampleBase::createInstance()
 
     vk::Result result = vk::createInstance(&instanceCreateInfo, nullptr, &instance);
     return result;
+}
+
+void VulkanExampleBase::setupDepthStencil()
+{
+    vk::ImageCreateInfo imageCI{};
+    imageCI.imageType   = vk::ImageType::e2D;
+    imageCI.format      = depthFormat;
+    imageCI.extent      = vk::Extent3D(width, height, 1);
+    imageCI.mipLevels   = 1;
+    imageCI.arrayLayers = 1;
+    imageCI.samples     = vk::SampleCountFlagBits::e1;
+    imageCI.tiling      = vk::ImageTiling::eOptimal;
+    imageCI.usage       = vk::ImageUsageFlagBits::eDepthStencilAttachment;
+    VK_CHECK_RESULT(device.createImage(&imageCI, nullptr, &depthStencil.image));
+
+    auto memReqs = device.getImageMemoryRequirements(depthStencil.image);
+    vk::MemoryAllocateInfo memAlloc{};
+    memAlloc.allocationSize = memReqs.size;
+    memAlloc.memoryTypeIndex = vulkanDevice->getMemoryType(memReqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal);
+    VK_CHECK_RESULT(device.allocateMemory(&memAlloc, nullptr, &depthStencil.memory));
+    device.bindImageMemory(depthStencil.image, depthStencil.memory, 0);
+
+    vk::ImageViewCreateInfo imageViewCI{};
+    imageViewCI.viewType                        = vk::ImageViewType::e2D;
+    imageViewCI.image                           = depthStencil.image;
+    imageViewCI.format                          = depthFormat;
+    imageViewCI.subresourceRange.baseMipLevel   = 0;
+    imageViewCI.subresourceRange.levelCount     = 1;
+    imageViewCI.subresourceRange.baseArrayLayer = 0;
+    imageViewCI.subresourceRange.layerCount     = 1;
+    imageViewCI.subresourceRange.aspectMask     = vk::ImageAspectFlagBits::eDepth;
+    // Stencil aspect should only be set on depth + stencil formats
+    if (requiresStencil) {
+        imageViewCI.subresourceRange.aspectMask |= vk::ImageAspectFlagBits::eStencil;
+    }
+    VK_CHECK_RESULT(device.createImageView(&imageViewCI, nullptr, &depthStencil.view));
+}
+
+void VulkanExampleBase::windowResize()
+{
+    // TODO
 }
 
 #if defined(_WIN32)
