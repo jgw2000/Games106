@@ -261,13 +261,13 @@ void VulkanSwapchain::create(uint32_t& width, uint32_t& height, bool vsync, bool
             vk::ComponentSwizzle::eB,
             vk::ComponentSwizzle::eA
         };
-        colorAttachmentView.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-        colorAttachmentView.subresourceRange.baseMipLevel = 0;
-        colorAttachmentView.subresourceRange.levelCount = 1;
+        colorAttachmentView.subresourceRange.aspectMask     = vk::ImageAspectFlagBits::eColor;
+        colorAttachmentView.subresourceRange.baseMipLevel   = 0;
+        colorAttachmentView.subresourceRange.levelCount     = 1;
         colorAttachmentView.subresourceRange.baseArrayLayer = 0;
-        colorAttachmentView.subresourceRange.layerCount = 1;
-        colorAttachmentView.viewType = vk::ImageViewType::e2D;
-        colorAttachmentView.image = images[i];
+        colorAttachmentView.subresourceRange.layerCount     = 1;
+        colorAttachmentView.viewType                        = vk::ImageViewType::e2D;
+        colorAttachmentView.image                           = images[i];
         VK_CHECK_RESULT(device.createImageView(&colorAttachmentView, nullptr, &imageViews[i]));
     }
 }

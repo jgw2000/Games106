@@ -90,10 +90,10 @@ public:
     virtual void setupDepthStencil();
 
     /** @brief (Virtual) Setup default framebuffers for all requested swapchain images */
-    virtual void setupFrameBuffer() {}
+    virtual void setupFrameBuffer();
 
     /** @brief (Virtual) Setup a default renderpass */
-    virtual void setupRenderPass() {}
+    virtual void setupRenderPass();
 
     /** @brief (Virtual) Called after the physical device features have been read, can be used to set features to enable on the device */
     virtual void getEnabledFeatures() {}
@@ -230,6 +230,15 @@ protected:
     /** @brief Set of layer settings to be enabled for this example (must be set in the derived constructor) */
     std::vector<vk::LayerSettingEXT> enabledLayerSettings;
 
+    // List of available frame buffers (same as number of swap chain images)
+    std::vector<vk::Framebuffer> frameBuffers;
+
+    // Global render pass for frame buffer writes
+    vk::RenderPass renderPass{ nullptr };
+
+    // Pipeline cache object
+    vk::PipelineCache pipelineCache{ nullptr };
+
     // Wraps the swap chain to present images (framebuffers) to the windowing system
     VulkanSwapchain swapchain;
 
@@ -259,6 +268,7 @@ private:
     void createCommandPool();
     void createCommandBuffers();
     void createSynchronizationPrimitives();
+    void createPipelineCache();
 
     std::string getWindowTitle() const;
     void handleMouseMove(int32_t x, int32_t y);

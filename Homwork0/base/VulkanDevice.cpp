@@ -206,7 +206,7 @@ namespace vks
                 // If compute family index differs, we need an additional queue create info for the compute queue
                 vk::DeviceQueueCreateInfo queueInfo{};
                 queueInfo.queueFamilyIndex = queueFamilyIndices.compute;
-                queueInfo.queueCount = 1;
+                queueInfo.queueCount       = 1;
                 queueInfo.pQueuePriorities = &defaultQueuePriority;
                 queueCreateInfos.push_back(queueInfo);
             }
@@ -226,7 +226,7 @@ namespace vks
                 // If transfer family index differs, we need an additional queue create info for the transfer queue
                 vk::DeviceQueueCreateInfo queueInfo{};
                 queueInfo.queueFamilyIndex = queueFamilyIndices.transfer;
-                queueInfo.queueCount = 1;
+                queueInfo.queueCount       = 1;
                 queueInfo.pQueuePriorities = &defaultQueuePriority;
                 queueCreateInfos.push_back(queueInfo);
             }
@@ -247,17 +247,17 @@ namespace vks
 
         vk::DeviceCreateInfo deviceCreateInfo = {};
         deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-        deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
-        deviceCreateInfo.pEnabledFeatures = &enabledFeatures;
+        deviceCreateInfo.pQueueCreateInfos    = queueCreateInfos.data();
+        deviceCreateInfo.pEnabledFeatures     = &enabledFeatures;
 
         // If a pNext(Chain) has been passed, we need to add it to the device create info
         vk::PhysicalDeviceFeatures2 physicalDeviceFeatures2{};
         if (pNextChain)
         {
-            physicalDeviceFeatures2.features = enabledFeatures;
-            physicalDeviceFeatures2.pNext = pNextChain;
+            physicalDeviceFeatures2.features  = enabledFeatures;
+            physicalDeviceFeatures2.pNext     = pNextChain;
             deviceCreateInfo.pEnabledFeatures = nullptr;
-            deviceCreateInfo.pNext = &physicalDeviceFeatures2;
+            deviceCreateInfo.pNext            = &physicalDeviceFeatures2;
         }
 
         if (deviceExtensions.size() > 0)
@@ -269,7 +269,7 @@ namespace vks
                 }
             }
 
-            deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
+            deviceCreateInfo.enabledExtensionCount   = static_cast<uint32_t>(deviceExtensions.size());
             deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.data();
         }
 
@@ -301,7 +301,7 @@ namespace vks
     {
         vk::CommandPoolCreateInfo cmdPoolInfo = {};
         cmdPoolInfo.queueFamilyIndex = queueFamilyIndex;
-        cmdPoolInfo.flags = createFlags;
+        cmdPoolInfo.flags            = createFlags;
 
         vk::CommandPool cmdPool;
         VK_CHECK_RESULT(logicalDevice.createCommandPool(&cmdPoolInfo, nullptr, &cmdPool));
