@@ -72,7 +72,7 @@ public:
     virtual vk::Result createInstance();
 
     /** @brief (Pure virtual) Render function to be implemented by the sample application */
-    virtual void render() {};
+    virtual void render() {}
 
     /** @brief (Virtual) Called after a key was pressed, can be used to do custom key handling */
     virtual void keyPressed(uint32_t) {}
@@ -110,13 +110,13 @@ public:
     void renderLoop();
 
     /** Prepare the next frame for workload submission by acquiring the next swap chain image */
-    void prepareFrame() {}
+    void prepareFrame();
 
     /** @brief Presents the current image to the swap chain */
-    void submitFrame() {}
+    void submitFrame();
 
     /** @brief (Virtual) Default image acquire + submission and command buffer submission function */
-    virtual void renderFrame() {}
+    virtual void renderFrame();
 
 #if defined(_WIN32)
     virtual void OnHandleMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {}
@@ -248,6 +248,12 @@ protected:
     // Command buffers used for rendering
     std::vector<vk::CommandBuffer> drawCmdBuffers;
 
+    // Contains command buffers and semaphores to be presented to the queue
+    vk::SubmitInfo submitInfo{};
+
+    /** @brief Pipeline stages used to wait at for graphics queue submissions */
+    vk::PipelineStageFlags submitPipelineStages = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+
     // Synchronization semaphores
     struct {
         // Swap chain image presentation
@@ -262,6 +268,9 @@ protected:
 
     bool requiresStencil{ false };
 
+    // Active frame buffer index
+    uint32_t currentBuffer = 0;
+
 private:
     void createSurface();
     void createSwapchain();
@@ -269,6 +278,7 @@ private:
     void createCommandBuffers();
     void createSynchronizationPrimitives();
     void createPipelineCache();
+    void destroyCommandBuffers();
 
     std::string getWindowTitle() const;
     void handleMouseMove(int32_t x, int32_t y);

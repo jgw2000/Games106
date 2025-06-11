@@ -162,7 +162,13 @@ bool VulkanExampleBase::initVulkan()
 
     swapchain.setContext(instance, physicalDevice, device);
 
-    // TODO
+    // Set up submit info structure
+    // Semaphores will stay the same during application lifetime
+    // Command buffer submission info is set by each example
+    submitInfo.waitSemaphoreCount   = 1;
+    submitInfo.pWaitDstStageMask    = &submitPipelineStages;
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores    = &semaphores.renderComplete;
  
     return true;
 }
@@ -209,6 +215,52 @@ void VulkanExampleBase::renderLoop()
     if (device != nullptr) {
         device.waitIdle();
     }
+}
+
+void VulkanExampleBase::prepareFrame()
+{
+    // Accquire the next image from the swap chain
+    vk::Result result = swapchain.acquireNextImage(semaphores.presentComplete, currentBuffer);
+
+    // Recreate the swapchain if it's no longer compatible with the surface (OUT_OF_DATE)
+    // SRS - If no longer optimal (VK_SUBOPTIMAL_KHR), wait until submitFrame() in case number of swapchain images will change on resize
+    if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) {
+        if (result == vk::Result::eErrorOutOfDateKHR) {
+            windowResize();
+        }
+        return;
+    }
+    else {
+        VK_CHECK_RESULT(result);
+    }
+}
+
+void VulkanExampleBase::submitFrame()
+{
+    vk::Result result = swapchain.queuePresent(queue, currentBuffer, semaphores.renderComplete);
+
+    // Recreate the swapchain if it's no longer compatible with the surface (OUT_OF_DATE) or no longer optimal for presentation (SUBOPTIMAL)
+    if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) {
+        windowResize();
+        if (result == vk::Result::eErrorOutOfDateKHR) {
+            return;
+        }
+    }
+    else {
+        VK_CHECK_RESULT(result);
+    }
+    queue.waitIdle();
+}
+
+void VulkanExampleBase::renderFrame()
+{
+    VulkanExampleBase::prepareFrame();
+
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &drawCmdBuffers[currentBuffer];
+    VK_CHECK_RESULT(queue.submit(1, &submitInfo, nullptr));
+
+    VulkanExampleBase::submitFrame();
 }
 
 vk::Result VulkanExampleBase::createInstance()
@@ -442,7 +494,54 @@ void VulkanExampleBase::setupRenderPass()
 
 void VulkanExampleBase::windowResize()
 {
+    if (!prepared)
+    {
+        return;
+    }
+
+    prepared = false;
+    resized = true;
+
+    // Ensure all operations on the device have been finished before destroying resources
+    device.waitIdle();
+
+    // Recreate swap chain
+    width = destWidth;
+    height = destHeight;
+    createSwapchain();
+
+    // Recreate the frame buffers
+    device.destroyImageView(depthStencil.view);
+    device.destroyImage(depthStencil.image);
+    device.freeMemory(depthStencil.memory);
+    setupDepthStencil();
+
+    for (auto& frameBuffer : frameBuffers) {
+        device.destroyFramebuffer(frameBuffer);
+    }
+    setupFrameBuffer();
+
     // TODO
+
+    // Command buffers need to be recreated as they may store
+    // references to the recreated frame buffer
+    destroyCommandBuffers();
+    createCommandBuffers();
+    buildCommandBuffers();
+
+    // SRS - Recreate fences in case number of swapchain images has changed on resize
+    for (auto& fence : waitFences) {
+        device.destroyFence(fence);
+    }
+    createSynchronizationPrimitives();
+
+    device.waitIdle();
+
+    // TODO
+
+    windowResized();
+
+    prepared = true;
 }
 
 #if defined(_WIN32)
@@ -721,6 +820,11 @@ void VulkanExampleBase::createCommandBuffers()
     cmdBufAllocateInfo.level = vk::CommandBufferLevel::ePrimary;
     cmdBufAllocateInfo.commandBufferCount = static_cast<uint32_t>(drawCmdBuffers.size());
     VK_CHECK_RESULT(device.allocateCommandBuffers(&cmdBufAllocateInfo, drawCmdBuffers.data()));
+}
+
+void VulkanExampleBase::destroyCommandBuffers()
+{
+    device.freeCommandBuffers(cmdPool, drawCmdBuffers);
 }
 
 void VulkanExampleBase::createSynchronizationPrimitives()

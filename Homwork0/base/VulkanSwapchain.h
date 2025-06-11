@@ -70,7 +70,7 @@ public:
     *
     * @return VkResult of the image acquisition
     */
-    //vk::Result acquireNextImage(vk::Semaphore presentCompleteSemaphore, uint32_t& imageIndex);
+    vk::Result acquireNextImage(vk::Semaphore presentCompleteSemaphore, uint32_t& imageIndex);
 
     /**
     * Queue an image for presentation
@@ -81,7 +81,7 @@ public:
     *
     * @return VkResult of the queue presentation
     */
-    //vk::Result queuePresent(vk::Queue queue, uint32_t imageIndex, vk::Semaphore waitSemaphore = nullptr);
+    vk::Result queuePresent(vk::Queue queue, uint32_t imageIndex, vk::Semaphore waitSemaphore = nullptr);
 
     /* Free all Vulkan resources acquired by the swapchain */
     void cleanup();

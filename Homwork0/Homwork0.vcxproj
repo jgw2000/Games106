@@ -24,6 +24,7 @@
     <ClCompile Include="base\VulkanSwapchain.cpp" />
     <ClCompile Include="base\VulkanTools.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="triangle.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="base\CommandLineParser.h" />
@@ -32,6 +33,7 @@
     <ClInclude Include="base\vulkanexamplebase.h" />
     <ClInclude Include="base\VulkanSwapchain.h" />
     <ClInclude Include="base\VulkanTools.h" />
+    <ClInclude Include="triangle.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>

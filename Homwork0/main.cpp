@@ -1,4 +1,4 @@
-#include "base/vulkanexamplebase.h"
+#include "triangle.h"
 
 VulkanExampleBase* vulkanExample;
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -13,7 +13,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_  HINSTANCE hPrevInstance, _In_ LPSTR, _In_ int)
 {
     for (int32_t i = 0; i < __argc; i++) { VulkanExampleBase::args.push_back(__argv[i]); };
-    vulkanExample = new VulkanExampleBase();
+    vulkanExample = new VulkanTriangle();
     vulkanExample->initVulkan();
     vulkanExample->setupWindow(hInstance, WndProc);
     vulkanExample->prepare();
