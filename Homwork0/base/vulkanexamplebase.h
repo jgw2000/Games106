@@ -26,7 +26,6 @@
 #include <numeric>
 #include <ctime>
 #include <iostream>
-#include <chrono>
 #include <random>
 #include <algorithm>
 #include <sys/stat.h>
@@ -46,10 +45,17 @@
 #include <vulkan/vulkan.hpp>
 
 #include "keycodes.h"
+#include "camera.h"
 #include "CommandLineParser.h"
+#include "Timer.h"
 #include "VulkanTools.h"
 #include "VulkanDevice.h"
 #include "VulkanSwapchain.h"
+
+// We want to keep GPU and CPU busy. To do that we may start building a new command buffer while the previous one is still being executed
+// This number defines how many frames may be worked on simultaneously at once
+// Increasing this number may improve performance but will also introduce additional latency
+#define MAX_CONCURRENT_FRAMES 3
 
 class VulkanExampleBase
 {
@@ -71,20 +77,14 @@ public:
     /** @brief (Virtual) Creates the application wide Vulkan instance */
     virtual vk::Result createInstance();
 
+    /** @brief Prepares all Vulkan resources and functions required to run the sample */
+    virtual void prepare();
+
     /** @brief (Pure virtual) Render function to be implemented by the sample application */
-    virtual void render() {}
-
-    /** @brief (Virtual) Called after a key was pressed, can be used to do custom key handling */
-    virtual void keyPressed(uint32_t) {}
-
-    /** @brief (Virtual) Called after the mouse cursor moved and before internal events (like camera rotation) is handled */
-    virtual void mouseMoved(double x, double y, bool& handled) {}
-
-    /** @brief (Virtual) Called when the window has been resized, can be used by the sample application to recreate resources */
-    virtual void windowResized() {}
+    virtual void render() = 0;
 
     /** @brief (Virtual) Called when resources have been recreated that require a rebuild of the command buffers (e.g. frame buffer), to be implemented by the sample application */
-    virtual void buildCommandBuffers() {}
+    virtual void buildCommandBuffers() = 0;
 
     /** @brief (Virtual) Setup default depth and stencil views */
     virtual void setupDepthStencil();
@@ -101,22 +101,19 @@ public:
     /** @brief (Virtual) Called after the physical device extensions have been read, can be used to enable extensions based on the supported extension listing*/
     virtual void getEnabledExtensions() {}
 
-    /** @brief Prepares all Vulkan resources and functions required to run the sample */
-    virtual void prepare();
+    /** @brief (Virtual) Called after a key was pressed, can be used to do custom key handling */
+    virtual void keyPressed(uint32_t) {}
 
-    void windowResize();
+    /** @brief (Virtual) Called after the mouse cursor moved and before internal events (like camera rotation) is handled */
+    virtual void mouseMoved(double x, double y, bool& handled) {}
+
+    /** @brief (Virtual) Called when the window has been resized, can be used by the sample application to recreate resources */
+    virtual void windowResized() {}
 
     /** @brief Entry point for the main render loop */
     void renderLoop();
 
-    /** Prepare the next frame for workload submission by acquiring the next swap chain image */
-    void prepareFrame();
-
-    /** @brief Presents the current image to the swap chain */
-    void submitFrame();
-
-    /** @brief (Virtual) Default image acquire + submission and command buffer submission function */
-    virtual void renderFrame();
+    void windowResize();
 
 #if defined(_WIN32)
     virtual void OnHandleMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {}
@@ -158,18 +155,6 @@ public:
     uint32_t width = 1280;
     uint32_t height = 720;
 
-    /** @brief Last frame time measured using a high performance timer (if available) */
-    float frameTimer = 1.0f;
-
-    // Defines a frame rate independent timer value clamped from -1.0...1.0
-    // For use in animations, rotations, etc.
-    float timer = 0.0f;
-
-    // Multiplier for speeding up (or slowing down) the global timer
-    float timerSpeed = 0.25f;
-
-    bool paused = false;
-
     /** @brief Default depth stencil attachment used by the default render pass */
     struct {
         vk::Image image;
@@ -188,11 +173,6 @@ public:
     uint32_t apiVersion = VK_API_VERSION_1_0;
 
 protected:
-    // Frame counter to display fps
-    uint32_t frameCounter = 0;
-    uint32_t lastFPS = 0;
-    std::chrono::time_point<std::chrono::high_resolution_clock> lastTimestamp, tPrevEnd;
-
     // Vulkan instance, stores all per-application states
     vk::Instance instance{ nullptr };
     std::vector<std::string> supportedInstanceExtensions;
@@ -242,26 +222,17 @@ protected:
     // Wraps the swap chain to present images (framebuffers) to the windowing system
     VulkanSwapchain swapchain;
 
-    // Command buffer pool
-    vk::CommandPool cmdPool{ nullptr };
-
     // Command buffers used for rendering
     std::vector<vk::CommandBuffer> drawCmdBuffers;
 
-    // Contains command buffers and semaphores to be presented to the queue
-    vk::SubmitInfo submitInfo{};
+    // Synchronization primitives
+    // Synchronization is an important concept of Vulkan that OpenGL mostly hid away. Getting this right is crucial to using Vulkan.
+    // Semaphores are used to coordinate operations within the graphics queue and ensure correct command ordering
+    std::array<vk::Semaphore, MAX_CONCURRENT_FRAMES> presentCompleteSemaphores{};
+    std::array<vk::Semaphore, MAX_CONCURRENT_FRAMES> renderCompleteSemaphores{};
 
-    /** @brief Pipeline stages used to wait at for graphics queue submissions */
-    vk::PipelineStageFlags submitPipelineStages = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-
-    // Synchronization semaphores
-    struct {
-        // Swap chain image presentation
-        vk::Semaphore presentComplete;
-        // Command buffer submission and execution
-        vk::Semaphore renderComplete;
-    } semaphores{};
-    std::vector<vk::Fence> waitFences;
+    // Fences are used to make sure command buffers aren't rerecorded until they've finished executing
+    std::array<vk::Fence, MAX_CONCURRENT_FRAMES> waitFences{};
 
     /** @brief Optional pNext structure for passing extension structures to device creation */
     void* deviceCreatepNextChain = nullptr;
@@ -274,7 +245,6 @@ protected:
 private:
     void createSurface();
     void createSwapchain();
-    void createCommandPool();
     void createCommandBuffers();
     void createSynchronizationPrimitives();
     void createPipelineCache();
@@ -283,6 +253,9 @@ private:
     std::string getWindowTitle() const;
     void handleMouseMove(int32_t x, int32_t y);
     void nextFrame();
+
+    Timer timer;
+    Camera camera;
 
     bool resizing = false;
     uint32_t destWidth{};

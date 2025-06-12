@@ -15,6 +15,9 @@
       <Filter>base</Filter>
     </ClCompile>
     <ClCompile Include="triangle.cpp" />
+    <ClCompile Include="base\Timer.cpp">
+      <Filter>base</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="base">
@@ -41,5 +44,11 @@
       <Filter>base</Filter>
     </ClInclude>
     <ClInclude Include="triangle.h" />
+    <ClInclude Include="base\Timer.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="base\camera.h">
+      <Filter>base</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

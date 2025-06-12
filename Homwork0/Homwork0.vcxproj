@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="base\Timer.cpp" />
     <ClCompile Include="base\VulkanDevice.cpp" />
     <ClCompile Include="base\vulkanexamplebase.cpp" />
     <ClCompile Include="base\VulkanSwapchain.cpp" />
@@ -27,8 +28,10 @@
     <ClCompile Include="triangle.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="base\camera.h" />
     <ClInclude Include="base\CommandLineParser.h" />
     <ClInclude Include="base\keycodes.h" />
+    <ClInclude Include="base\Timer.h" />
     <ClInclude Include="base\VulkanDevice.h" />
     <ClInclude Include="base\vulkanexamplebase.h" />
     <ClInclude Include="base\VulkanSwapchain.h" />

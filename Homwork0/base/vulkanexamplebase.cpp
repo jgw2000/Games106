@@ -86,13 +86,11 @@ VulkanExampleBase::~VulkanExampleBase()
     device.destroyImage(depthStencil.image);
     device.freeMemory(depthStencil.memory);
 
-    device.destroyCommandPool(cmdPool);
-
     // synchronization objects
-    device.destroySemaphore(semaphores.presentComplete);
-    device.destroySemaphore(semaphores.renderComplete);
-    for (auto& fence : waitFences) {
-        device.destroyFence(fence);
+    for (uint32_t i = 0; i < MAX_CONCURRENT_FRAMES; ++i) {
+        device.destroySemaphore(presentCompleteSemaphores[i]);
+        device.destroySemaphore(renderCompleteSemaphores[i]);
+        device.destroyFence(waitFences[i]);
     }
 
     delete vulkanDevice;
@@ -161,14 +159,6 @@ bool VulkanExampleBase::initVulkan()
     assert(validFormat);
 
     swapchain.setContext(instance, physicalDevice, device);
-
-    // Set up submit info structure
-    // Semaphores will stay the same during application lifetime
-    // Command buffer submission info is set by each example
-    submitInfo.waitSemaphoreCount   = 1;
-    submitInfo.pWaitDstStageMask    = &submitPipelineStages;
-    submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores    = &semaphores.renderComplete;
  
     return true;
 }
@@ -177,7 +167,6 @@ void VulkanExampleBase::prepare()
 {
     createSurface();
     createSwapchain();
-    createCommandPool();
     createCommandBuffers();
     createSynchronizationPrimitives();
     createPipelineCache();
@@ -188,10 +177,10 @@ void VulkanExampleBase::prepare()
 
 void VulkanExampleBase::renderLoop()
 {
+    timer.onRender();
+
     destWidth = width;
     destHeight = height;
-    lastTimestamp = std::chrono::high_resolution_clock::now();
-    tPrevEnd = lastTimestamp;
 
 #if defined(_WIN32)
     MSG msg;
@@ -215,52 +204,6 @@ void VulkanExampleBase::renderLoop()
     if (device != nullptr) {
         device.waitIdle();
     }
-}
-
-void VulkanExampleBase::prepareFrame()
-{
-    // Accquire the next image from the swap chain
-    vk::Result result = swapchain.acquireNextImage(semaphores.presentComplete, currentBuffer);
-
-    // Recreate the swapchain if it's no longer compatible with the surface (OUT_OF_DATE)
-    // SRS - If no longer optimal (VK_SUBOPTIMAL_KHR), wait until submitFrame() in case number of swapchain images will change on resize
-    if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) {
-        if (result == vk::Result::eErrorOutOfDateKHR) {
-            windowResize();
-        }
-        return;
-    }
-    else {
-        VK_CHECK_RESULT(result);
-    }
-}
-
-void VulkanExampleBase::submitFrame()
-{
-    vk::Result result = swapchain.queuePresent(queue, currentBuffer, semaphores.renderComplete);
-
-    // Recreate the swapchain if it's no longer compatible with the surface (OUT_OF_DATE) or no longer optimal for presentation (SUBOPTIMAL)
-    if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) {
-        windowResize();
-        if (result == vk::Result::eErrorOutOfDateKHR) {
-            return;
-        }
-    }
-    else {
-        VK_CHECK_RESULT(result);
-    }
-    queue.waitIdle();
-}
-
-void VulkanExampleBase::renderFrame()
-{
-    VulkanExampleBase::prepareFrame();
-
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &drawCmdBuffers[currentBuffer];
-    VK_CHECK_RESULT(queue.submit(1, &submitInfo, nullptr));
-
-    VulkanExampleBase::submitFrame();
 }
 
 vk::Result VulkanExampleBase::createInstance()
@@ -537,7 +480,9 @@ void VulkanExampleBase::windowResize()
 
     device.waitIdle();
 
-    // TODO
+    if (width > 0.0f && height > 0.0f) {
+        camera.updateAspectRatio((float)width / height);
+    }
 
     windowResized();
 
@@ -714,25 +659,64 @@ void VulkanExampleBase::handleMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
         switch (wParam)
         {
         case KEY_P:
-            paused = !paused;
+            timer.onKeyP();
             break;
         case KEY_F1:
             // TODO
             break;
         case KEY_F2:
-            // TODO
+            if (camera.type == Camera::CameraType::lookat) {
+                camera.type = Camera::CameraType::firstperson;
+            }
+            else {
+                camera.type = Camera::CameraType::lookat;
+            }
             break;
         case KEY_ESCAPE:
             PostQuitMessage(0);
             break;
         }
 
-        // TODO
+        if (camera.type == Camera::CameraType::firstperson)
+        {
+            switch (wParam)
+            {
+            case KEY_W:
+                camera.keys.up = true;
+                break;
+            case KEY_S:
+                camera.keys.down = true;
+                break;
+            case KEY_A:
+                camera.keys.left = true;
+                break;
+            case KEY_D:
+                camera.keys.right = true;
+                break;
+            }
+        }
 
         keyPressed((uint32_t)wParam);
         break;
     case WM_KEYUP:
-        // TODO
+        if (camera.type == Camera::CameraType::firstperson)
+        {
+            switch (wParam)
+            {
+            case KEY_W:
+                camera.keys.up = false;
+                break;
+            case KEY_S:
+                camera.keys.down = false;
+                break;
+            case KEY_A:
+                camera.keys.left = false;
+                break;
+            case KEY_D:
+                camera.keys.right = false;
+                break;
+            }
+        }
         break;
     case WM_LBUTTONDOWN:
         mouseState.position = glm::vec2((float)LOWORD(lParam), (float)HIWORD(lParam));
@@ -756,7 +740,11 @@ void VulkanExampleBase::handleMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
         mouseState.buttons.middle = false;
         break;
     case WM_MOUSEWHEEL:
-        // TODO
+    {
+        short wheelDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+        camera.translate(glm::vec3(0.0f, 0.0f, (float)wheelDelta * 0.005f));
+        viewUpdated = true;
+    }
         break;
     case WM_MOUSEMOVE:
         handleMouseMove(LOWORD(lParam), HIWORD(lParam));
@@ -803,20 +791,12 @@ void VulkanExampleBase::createSwapchain()
     swapchain.create(width, height, settings.vsync, settings.fullscreen);
 }
 
-void VulkanExampleBase::createCommandPool()
-{
-    vk::CommandPoolCreateInfo cmdPoolInfo = {};
-    cmdPoolInfo.queueFamilyIndex = swapchain.queueNodeIndex;
-    cmdPoolInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-    VK_CHECK_RESULT(device.createCommandPool(&cmdPoolInfo, nullptr, &cmdPool));
-}
-
 void VulkanExampleBase::createCommandBuffers()
 {
     // Create one command buffer for each swap chain image
     drawCmdBuffers.resize(swapchain.images.size());
     vk::CommandBufferAllocateInfo cmdBufAllocateInfo = {};
-    cmdBufAllocateInfo.commandPool = cmdPool;
+    cmdBufAllocateInfo.commandPool = vulkanDevice->commandPool;
     cmdBufAllocateInfo.level = vk::CommandBufferLevel::ePrimary;
     cmdBufAllocateInfo.commandBufferCount = static_cast<uint32_t>(drawCmdBuffers.size());
     VK_CHECK_RESULT(device.allocateCommandBuffers(&cmdBufAllocateInfo, drawCmdBuffers.data()));
@@ -824,27 +804,23 @@ void VulkanExampleBase::createCommandBuffers()
 
 void VulkanExampleBase::destroyCommandBuffers()
 {
-    device.freeCommandBuffers(cmdPool, drawCmdBuffers);
+    device.freeCommandBuffers(vulkanDevice->commandPool, drawCmdBuffers);
 }
 
 void VulkanExampleBase::createSynchronizationPrimitives()
 {
-    // Create synchronization objects
-    vk::SemaphoreCreateInfo semaphoreCreateInfo = {};
-    
-    // Create a semaphore used to synchronize image presentation
-    // Ensures that the image is displayed before we start submitting new commands to the queue
-    VK_CHECK_RESULT(device.createSemaphore(&semaphoreCreateInfo, nullptr, &semaphores.presentComplete));
-    
-    // Create a semaphore used to synchronize command submission
-    // Ensures that the image is not presented until all commands have been submitted and executed
-    VK_CHECK_RESULT(device.createSemaphore(&semaphoreCreateInfo, nullptr, &semaphores.renderComplete));
-
-    // Wait fences to sync command buffer access
-    vk::FenceCreateInfo fenceCreateInfo = {};
-    waitFences.resize(drawCmdBuffers.size());
-    for (auto& fence : waitFences) {
-        VK_CHECK_RESULT(device.createFence(&fenceCreateInfo, nullptr, &fence));
+    for (uint32_t i = 0; i < MAX_CONCURRENT_FRAMES; ++i) {
+        // Semaphores are used for correct command ordering within a queue
+        vk::SemaphoreCreateInfo semaphoreCI = {};
+        // Semaphore used to ensure that image presentation is complete before starting to submit again
+        VK_CHECK_RESULT(device.createSemaphore(&semaphoreCI, nullptr, &presentCompleteSemaphores[i]));
+        // Semaphore used to ensure that all commands submitted have been finished before submitting the image to the queue
+        VK_CHECK_RESULT(device.createSemaphore(&semaphoreCI, nullptr, &renderCompleteSemaphores[i]));
+        // Fence used to ensure that command buffer has completed execution before using it again
+        vk::FenceCreateInfo fenceCI = {};
+        // Create the fences in signaled state (so we don't wait on first render of each command buffer)
+        fenceCI.flags = vk::FenceCreateFlagBits::eSignaled;
+        VK_CHECK_RESULT(device.createFence(&fenceCI, nullptr, &waitFences[i]));
     }
 }
 
@@ -861,12 +837,39 @@ std::string VulkanExampleBase::getWindowTitle() const
 
 void VulkanExampleBase::handleMouseMove(int32_t x, int32_t y)
 {
+    int32_t dx = (int32_t)mouseState.position.x - x;
+    int32_t dy = (int32_t)mouseState.position.y - y;
+
+    bool handled = false;
+
     // TODO
+
+    mouseMoved((float)x, (float)y, handled);
+
+    if (handled) {
+        mouseState.position = glm::vec2((float)x, (float)y);
+        return;
+    }
+
+    if (mouseState.buttons.left) {
+        camera.rotate(glm::vec3(dy * camera.rotationSpeed, -dx * camera.rotationSpeed, 0.0f));
+        viewUpdated = true;
+    }
+    if (mouseState.buttons.right) {
+        camera.translate(glm::vec3(0.0f, 0.0f, dy * 0.005f));
+        viewUpdated = true;
+    }
+    if (mouseState.buttons.middle) {
+        camera.translate(glm::vec3(-dx * 0.005f, -dy * 0.005f, 0.0f));
+        viewUpdated = true;
+    }
+    mouseState.position = glm::vec2((float)x, (float)y);
 }
 
 void VulkanExampleBase::nextFrame()
 {
-    auto tStart = std::chrono::high_resolution_clock::now();
+    timer.onFrameStart();
+
     if (viewUpdated)
     {
         viewUpdated = false;
@@ -874,10 +877,11 @@ void VulkanExampleBase::nextFrame()
 
     render();
 
-    ++frameCounter;
-    auto tEnd = std::chrono::high_resolution_clock::now();
-    auto tDiff = std::chrono::duration<double, std::milli>(tEnd - tStart).count();
-    frameTimer = (float)tDiff / 1000.0f;
+    timer.onFrameStop();
 
-    // TODO
+    camera.update(timer.getFrameTime());
+    if (camera.moving())
+    {
+        viewUpdated = true;
+    }
 }
