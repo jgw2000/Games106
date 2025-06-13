@@ -793,18 +793,16 @@ void VulkanExampleBase::createSwapchain()
 
 void VulkanExampleBase::createCommandBuffers()
 {
-    // Create one command buffer for each swap chain image
-    drawCmdBuffers.resize(swapchain.images.size());
     vk::CommandBufferAllocateInfo cmdBufAllocateInfo = {};
     cmdBufAllocateInfo.commandPool = vulkanDevice->commandPool;
     cmdBufAllocateInfo.level = vk::CommandBufferLevel::ePrimary;
-    cmdBufAllocateInfo.commandBufferCount = static_cast<uint32_t>(drawCmdBuffers.size());
-    VK_CHECK_RESULT(device.allocateCommandBuffers(&cmdBufAllocateInfo, drawCmdBuffers.data()));
+    cmdBufAllocateInfo.commandBufferCount = MAX_CONCURRENT_FRAMES;
+    VK_CHECK_RESULT(device.allocateCommandBuffers(&cmdBufAllocateInfo, commandBuffers.data()));
 }
 
 void VulkanExampleBase::destroyCommandBuffers()
 {
-    device.freeCommandBuffers(vulkanDevice->commandPool, drawCmdBuffers);
+    device.freeCommandBuffers(vulkanDevice->commandPool, commandBuffers);
 }
 
 void VulkanExampleBase::createSynchronizationPrimitives()

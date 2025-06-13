@@ -223,7 +223,7 @@ protected:
     VulkanSwapchain swapchain;
 
     // Command buffers used for rendering
-    std::vector<vk::CommandBuffer> drawCmdBuffers;
+    std::array<vk::CommandBuffer, MAX_CONCURRENT_FRAMES> commandBuffers;
 
     // Synchronization primitives
     // Synchronization is an important concept of Vulkan that OpenGL mostly hid away. Getting this right is crucial to using Vulkan.
@@ -240,7 +240,9 @@ protected:
     bool requiresStencil{ false };
 
     // Active frame buffer index
-    uint32_t currentBuffer = 0;
+    uint32_t currentFrame = 0;
+
+    Camera camera;
 
 private:
     void createSurface();
@@ -255,7 +257,6 @@ private:
     void nextFrame();
 
     Timer timer;
-    Camera camera;
 
     bool resizing = false;
     uint32_t destWidth{};

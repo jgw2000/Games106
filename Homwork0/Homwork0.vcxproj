@@ -38,6 +38,12 @@
     <ClInclude Include="base\VulkanTools.h" />
     <ClInclude Include="triangle.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\glsl\triangle.frag" />
+    <None Include="shaders\glsl\triangle.frag.spv" />
+    <None Include="shaders\glsl\triangle.vert" />
+    <None Include="shaders\glsl\triangle.vert.spv" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>

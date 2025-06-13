@@ -23,6 +23,12 @@
     <Filter Include="base">
       <UniqueIdentifier>{295faed0-7ac3-4e27-9b9f-d34cbae96937}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shaders">
+      <UniqueIdentifier>{073f1c61-f61c-4749-8031-c6d3ab2c0f77}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\glsl">
+      <UniqueIdentifier>{c0d6cb01-a1a1-4cf0-b922-937deac4606c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="base\vulkanexamplebase.h">
@@ -50,5 +56,19 @@
     <ClInclude Include="base\camera.h">
       <Filter>base</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\glsl\triangle.frag">
+      <Filter>shaders\glsl</Filter>
+    </None>
+    <None Include="shaders\glsl\triangle.frag.spv">
+      <Filter>shaders\glsl</Filter>
+    </None>
+    <None Include="shaders\glsl\triangle.vert">
+      <Filter>shaders\glsl</Filter>
+    </None>
+    <None Include="shaders\glsl\triangle.vert.spv">
+      <Filter>shaders\glsl</Filter>
+    </None>
   </ItemGroup>
 </Project>
